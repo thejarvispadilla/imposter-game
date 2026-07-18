@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Imposter — a pass-the-phone word game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700;9..144,900&family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#0C2E23;
+  --felt-2:#123B2C;
+  --cream:#F5EFDF;
+  --cream-2:#EAE2CC;
+  --ink:#191510;
+  --red:#B3342E;
+  --brass:#C9A45C;
+  --shadow:0 18px 40px rgba(0,0,0,.45);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:"Instrument Sans",system-ui,sans-serif;
+  background:
+    radial-gradient(120% 90% at 50% 0%, var(--felt-2) 0%, var(--felt) 60%),
+    var(--felt);
+  color:var(--cream);
+  min-height:100dvh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  overflow-x:hidden;
+}
+.table-edge{
+  position:fixed;inset:0;pointer-events:none;
+  box-shadow:inset 0 0 90px rgba(0,0,0,.55);
+}
+.screen{
+  width:min(430px,100%);
+  min-height:100dvh;
+  padding:28px 22px 40px;
+  display:none;
+  flex-direction:column;
+  align-items:center;
+}
+.screen.active{display:flex}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11px;letter-spacing:.28em;
+  color:var(--brass);
+  text-transform:uppercase;
+  margin-bottom:10px;
+}
+h1{
+  font-family:Fraunces,serif;
+  font-weight:900;
+  font-size:clamp(44px,13vw,58px);
+  line-height:.95;
+  text-align:center;
+  letter-spacing:-.01em;
+}
+h1 .red{color:#E0564F}
+h2{
+  font-family:Fraunces,serif;font-weight:700;
+  font-size:26px;text-align:center;line-height:1.15;
+}
+.sub{
+  color:rgba(245,239,223,.72);
+  font-size:15px;text-align:center;line-height:1.5;
+  max-width:300px;margin-top:10px;
+}
+.spacer{flex:1}
+.btn{
+  appearance:none;border:none;cursor:pointer;
+  font-family:"Instrument Sans",sans-serif;font-weight:600;font-size:17px;
+  border-radius:999px;padding:16px 28px;width:100%;
+  transition:transform .12s ease, box-shadow .12s ease;
+}
+.btn:active{transform:scale(.97)}
+.btn-primary{background:var(--cream);color:var(--ink);box-shadow:0 8px 22px rgba(0,0,0,.35)}
+.btn-red{background:var(--red);color:var(--cream);box-shadow:0 8px 22px rgba(0,0,0,.35)}
+.btn-ghost{background:transparent;color:rgba(245,239,223,.7);font-weight:500;font-size:15px;padding:12px}
+.btn:focus-visible{outline:3px solid var(--brass);outline-offset:3px}
+.panel{
+  width:100%;background:rgba(0,0,0,.22);
+  border:1px solid rgba(201,164,92,.25);
+  border-radius:18px;padding:18px;margin-top:22px;
+}
+.panel-label{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--brass);
+  margin-bottom:12px;
+}
+.player-row{display:flex;gap:8px;margin-bottom:8px}
+.player-row input{
+  flex:1;background:rgba(245,239,223,.08);
+  border:1px solid rgba(245,239,223,.18);
+  border-radius:10px;color:var(--cream);
+  font-family:"Instrument Sans",sans-serif;font-size:16px;
+  padding:12px 14px;
+}
+.player-row input:focus{outline:2px solid var(--brass);outline-offset:1px}
+.player-row button{
+  background:transparent;border:none;color:rgba(245,239,223,.45);
+  font-size:20px;cursor:pointer;width:38px;border-radius:8px;
+}
+.add-player{
+  background:transparent;border:1px dashed rgba(201,164,92,.5);
+  color:var(--brass);border-radius:10px;width:100%;
+  padding:11px;font-family:"Instrument Sans",sans-serif;
+  font-size:15px;font-weight:500;cursor:pointer;margin-top:2px;
+}
+.toggle-row{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;padding:4px 0;
+}
+.toggle-row .t-label{font-size:15px;font-weight:500}
+.toggle-row .t-hint{font-size:12.5px;color:rgba(245,239,223,.55);margin-top:2px;line-height:1.4}
+.switch{
+  position:relative;width:52px;height:30px;flex-shrink:0;
+  background:rgba(245,239,223,.15);border-radius:999px;
+  border:1px solid rgba(245,239,223,.2);cursor:pointer;
+  transition:background .15s;
+}
+.switch::after{
+  content:"";position:absolute;top:3px;left:3px;
+  width:22px;height:22px;border-radius:50%;
+  background:var(--cream);transition:left .15s;
+}
+.switch.on{background:var(--red);border-color:var(--red)}
+.switch.on::after{left:25px}
+.pass-name{
+  font-family:Fraunces,serif;font-weight:900;
+  font-size:clamp(40px,12vw,54px);text-align:center;line-height:1;
+  margin-top:8px;
+}
+.deal-count{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;
+  letter-spacing:.2em;color:rgba(245,239,223,.5);margin-top:14px;
+}
+.card-zone{perspective:1200px;margin:34px 0 10px;width:250px;height:360px}
+.card{
+  position:relative;width:100%;height:100%;
+  transform-style:preserve-3d;
+  transition:transform .6s cubic-bezier(.4,.1,.2,1);
+  cursor:pointer;
+}
+.card.flipped{transform:rotateY(180deg)}
+.card-face{
+  position:absolute;inset:0;border-radius:16px;
+  backface-visibility:hidden;-webkit-backface-visibility:hidden;
+  box-shadow:var(--shadow);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:22px;
+}
+.card-back{
+  background:
+    repeating-linear-gradient(45deg, rgba(201,164,92,.16) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, rgba(201,164,92,.16) 0 2px, transparent 2px 14px),
+    linear-gradient(160deg,#8E2722,#6E1C18);
+  border:10px solid var(--cream);
+}
+.card-back .crest{
+  font-family:Fraunces,serif;font-weight:900;font-size:64px;
+  color:var(--cream);opacity:.9;
+}
+.card-back .tap{
+  font-family:"IBM Plex Mono",monospace;font-size:11px;
+  letter-spacing:.24em;color:var(--cream);opacity:.75;
+  margin-top:12px;text-transform:uppercase;
+}
+.card-front{
+  background:linear-gradient(175deg,var(--cream),var(--cream-2));
+  color:var(--ink);transform:rotateY(180deg);
+  border:1px solid rgba(25,21,16,.15);
+}
+.card-front .corner{
+  position:absolute;font-family:Fraunces,serif;font-weight:700;
+  font-size:18px;color:var(--red);
+}
+.card-front .corner.tl{top:12px;left:14px}
+.card-front .corner.br{bottom:12px;right:14px;transform:rotate(180deg)}
+.card-front .your-word-label{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;
+  letter-spacing:.26em;text-transform:uppercase;color:rgba(25,21,16,.5);
+  margin-bottom:14px;
+}
+.card-front .word{
+  font-family:Fraunces,serif;font-weight:900;
+  font-size:clamp(30px,9vw,40px);text-align:center;line-height:1.05;
+  letter-spacing:-.01em;
+}
+.card-front .role-note{
+  margin-top:18px;font-size:13px;text-align:center;
+  color:rgba(25,21,16,.6);line-height:1.45;max-width:180px;
+}
+.card-front .imposter-stamp{
+  margin-top:16px;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;
+  letter-spacing:.3em;text-transform:uppercase;
+  color:var(--red);border:2px solid var(--red);
+  padding:6px 12px;border-radius:4px;transform:rotate(-4deg);
+}
+.order-list{width:100%;margin-top:24px;display:flex;flex-direction:column;gap:9px}
+.order-item{
+  display:flex;align-items:center;gap:14px;
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(201,164,92,.22);
+  border-radius:12px;padding:13px 16px;
+}
+.order-item .n{
+  font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--brass);
+  width:22px;
+}
+.order-item .name{font-size:17px;font-weight:600}
+.order-item .lead{
+  margin-left:auto;font-family:"IBM Plex Mono",monospace;
+  font-size:10px;letter-spacing:.18em;color:var(--brass);
+  text-transform:uppercase;
+}
+.vote-grid{width:100%;margin-top:24px;display:flex;flex-direction:column;gap:9px}
+.vote-chip{
+  background:rgba(0,0,0,.22);
+  border:1px solid rgba(245,239,223,.2);
+  border-radius:12px;padding:15px 16px;
+  color:var(--cream);font-family:"Instrument Sans",sans-serif;
+  font-size:17px;font-weight:600;cursor:pointer;text-align:left;
+  transition:border-color .12s, background .12s;
+}
+.vote-chip.selected{
+  border-color:var(--red);background:rgba(179,52,46,.25);
+}
+.result-big{
+  font-family:Fraunces,serif;font-weight:900;
+  font-size:clamp(38px,11vw,50px);text-align:center;line-height:1;
+}
+.result-words{
+  width:100%;margin-top:26px;display:flex;gap:10px;
+}
+.word-slab{
+  flex:1;background:rgba(0,0,0,.22);
+  border:1px solid rgba(201,164,92,.25);
+  border-radius:14px;padding:16px 12px;text-align:center;
+}
+.word-slab .wl{
+  font-family:"IBM Plex Mono",monospace;font-size:10px;
+  letter-spacing:.2em;text-transform:uppercase;
+  color:rgba(245,239,223,.55);margin-bottom:8px;
+}
+.word-slab .wv{font-family:Fraunces,serif;font-weight:700;font-size:21px}
+.word-slab.imp .wv{color:#E0564F}
+.steal-note{
+  margin-top:20px;font-size:14px;line-height:1.55;text-align:center;
+  color:rgba(245,239,223,.75);max-width:300px;
+}
+.bottom-actions{width:100%;margin-top:auto;display:flex;flex-direction:column;gap:10px;padding-top:28px}
+@media (prefers-reduced-motion: reduce){
+  .card{transition:none}
+  .btn{transition:none}
+}
+</style>
+</head>
+<body>
+<div class="table-edge"></div>
+
+<!-- SETUP -->
+<section class="screen active" id="s-setup">
+  <div class="eyebrow">A pass-the-phone game</div>
+  <h1>Impos<span class="red">t</span>er</h1>
+  <p class="sub">Everyone gets the same word. One of you doesn't. Say your clues, find the fraud.</p>
+
+  <div class="panel">
+    <div class="panel-label">Players · 3–12</div>
+    <div id="player-list"></div>
+    <button class="add-player" onclick="addPlayer()">+ Add player</button>
+  </div>
+
+  <div class="panel">
+    <div class="toggle-row">
+      <div>
+        <div class="t-label">Tell the imposter</div>
+        <div class="t-hint">Off = nobody knows their role, everyone just sees a word. Harder &amp; sneakier.</div>
+      </div>
+      <div class="switch" id="tg-tell" role="switch" aria-checked="false" tabindex="0" onclick="toggleTell()" onkeydown="if(event.key==='Enter'||event.key===' ')toggleTell()"></div>
+    </div>
+  </div>
+
+  <div class="bottom-actions">
+    <button class="btn btn-red" onclick="startGame()">Deal the cards</button>
+  </div>
+</section>
+
+<!-- PASS -->
+<section class="screen" id="s-pass">
+  <div class="spacer"></div>
+  <div class="eyebrow">Pass the phone to</div>
+  <div class="pass-name" id="pass-name"></div>
+  <div class="deal-count" id="deal-count"></div>
+  <div class="spacer"></div>
+  <div class="bottom-actions">
+    <button class="btn btn-primary" onclick="showCard()">I'm holding it — deal me in</button>
+  </div>
+</section>
+
+<!-- REVEAL -->
+<section class="screen" id="s-reveal">
+  <div class="eyebrow" id="reveal-name"></div>
+  <div class="card-zone">
+    <div class="card" id="card" onclick="flipCard()" role="button" tabindex="0" aria-label="Tap to flip your card" onkeydown="if(event.key==='Enter'||event.key===' ')flipCard()">
+      <div class="card-face card-back">
+        <div class="crest">?</div>
+        <div class="tap">Tap to flip</div>
+      </div>
+      <div class="card-face card-front">
+        <span class="corner tl">✦</span><span class="corner br">✦</span>
+        <div class="your-word-label">Your word</div>
+        <div class="word" id="card-word"></div>
+        <div id="card-role"></div>
+      </div>
+    </div>
+  </div>
+  <div class="spacer"></div>
+  <div class="bottom-actions">
+    <button class="btn btn-primary" id="btn-hide" style="visibility:hidden" onclick="hideAndPass()">Hide it &amp; pass on</button>
+  </div>
+</section>
+
+<!-- ORDER -->
+<section class="screen" id="s-order">
+  <div class="eyebrow">Everyone's in</div>
+  <h2>Speaking order</h2>
+  <p class="sub">One clue each — a word or short phrase. Not too obvious, not too vague. Then go again if you need a second lap.</p>
+  <div class="order-list" id="order-list"></div>
+  <div class="bottom-actions">
+    <button class="btn btn-red" onclick="goVote()">We've talked — vote</button>
+  </div>
+</section>
+
+<!-- VOTE -->
+<section class="screen" id="s-vote">
+  <div class="eyebrow">Point your fingers</div>
+  <h2>Who's the imposter?</h2>
+  <p class="sub">Argue it out, then tap the table's verdict.</p>
+  <div class="vote-grid" id="vote-grid"></div>
+  <div class="bottom-actions">
+    <button class="btn btn-red" id="btn-reveal" disabled style="opacity:.4" onclick="revealResult()">Reveal</button>
+  </div>
+</section>
+
+<!-- RESULT -->
+<section class="screen" id="s-result">
+  <div class="spacer"></div>
+  <div class="eyebrow" id="result-eyebrow"></div>
+  <div class="result-big" id="result-big"></div>
+  <p class="sub" id="result-sub"></p>
+  <div class="result-words">
+    <div class="word-slab"><div class="wl">Crew word</div><div class="wv" id="rw-crew"></div></div>
+    <div class="word-slab imp"><div class="wl">Imposter word</div><div class="wv" id="rw-imp"></div></div>
+  </div>
+  <p class="steal-note" id="steal-note"></p>
+  <div class="spacer"></div>
+  <div class="bottom-actions">
+    <button class="btn btn-primary" onclick="nextRound()">Deal another round</button>
+    <button class="btn btn-ghost" onclick="backToSetup()">Change players</button>
+  </div>
+</section>
+
+<script>
+const PAIRS=[
+["Beach","Pool"],["Pizza","Lasagna"],["Sushi","Poke bowl"],["Burger","Hot dog"],
+["Pancakes","Waffles"],["Taco","Burrito"],["Ice cream","Frozen yogurt"],["Coffee","Espresso"],
+["Croissant","Bagel"],["Ramen","Pho"],["Gym","Yoga studio"],["Airport","Train station"],
+["Hotel","Airbnb"],["Casino","Arcade"],["Library","Bookstore"],["Museum","Art gallery"],
+["Cinema","Theater"],["Sauna","Hot tub"],["Surfing","Skateboarding"],["Camping","Glamping"],
+["Hiking","Trail running"],["Poker","Blackjack"],["Karaoke","Concert"],["Fishing","Kayaking"],
+["Skiing","Snowboarding"],["Golf","Mini golf"],["Guitar","Ukulele"],["iPhone","Android"],
+["Laptop","Tablet"],["Sneakers","Sandals"],["Watch","Bracelet"],["Umbrella","Raincoat"],
+["Candle","Incense"],["Dog","Wolf"],["Cat","Tiger"],["Dolphin","Shark"],
+["Eagle","Hawk"],["Horse","Zebra"],["Bee","Wasp"],["Doctor","Nurse"],
+["Pilot","Flight attendant"],["Chef","Baker"],["Teacher","Professor"],["Barista","Bartender"],
+["Wine","Champagne"],["Beer","Cider"],["Whiskey","Rum"],["Smoothie","Milkshake"],
+["Wedding","Prom"],["Birthday","New Year's Eve"],["Halloween","Costume party"],["Christmas","Thanksgiving"],
+["Soccer","Rugby"],["Basketball","Volleyball"],["Tennis","Badminton"],["Boxing","Wrestling"],
+["Paris","Rome"],["Vegas","Miami"],["Desert","Savanna"],["Waterfall","Geyser"],
+["Submarine","Cruise ship"],["Helicopter","Hot air balloon"],["Tattoo","Piercing"],["Mustache","Beard"]
+];
+let players=[];
+let tellImposter=false;
+let state={};
+let usedPairs=[];
+
+function shuffle(a){const b=[...a];for(let i=b.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[b[i],b[j]]=[b[j],b[i]]}return b}
+function show(id){document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));document.getElementById(id).classList.add('active');window.scrollTo(0,0)}
+
+function renderPlayers(){
+  const list=document.getElementById('player-list');
+  list.innerHTML='';
+  players.forEach((p,i)=>{
+    const row=document.createElement('div');row.className='player-row';
+    const input=document.createElement('input');
+    input.value=p;input.placeholder='Player '+(i+1);input.maxLength=16;
+    input.oninput=e=>{players[i]=e.target.value};
+    const del=document.createElement('button');del.textContent='×';del.setAttribute('aria-label','Remove player');
+    del.onclick=()=>{if(players.length>3){players.splice(i,1);renderPlayers()}};
+    row.append(input,del);list.appendChild(row);
+  });
+}
+function addPlayer(){if(players.length<12){players.push('');renderPlayers();const inputs=document.querySelectorAll('.player-row input');inputs[inputs.length-1].focus()}}
+function toggleTell(){tellImposter=!tellImposter;const t=document.getElementById('tg-tell');t.classList.toggle('on',tellImposter);t.setAttribute('aria-checked',tellImposter)}
+
+function startGame(){
+  players=players.map((p,i)=>p.trim()||('Player '+(i+1)));
+  if(players.length<3){return}
+  if(usedPairs.length>=PAIRS.length)usedPairs=[];
+  let pi;do{pi=Math.floor(Math.random()*PAIRS.length)}while(usedPairs.includes(pi));
+  usedPairs.push(pi);
+  const flip=Math.random()<.5;
+  const crewWord=flip?PAIRS[pi][0]:PAIRS[pi][1];
+  const impWord=flip?PAIRS[pi][1]:PAIRS[pi][0];
+  state={
+    crewWord,impWord,
+    imposter:Math.floor(Math.random()*players.length),
+    revealIdx:0,
+    order:shuffle(players.map((_,i)=>i)),
+    accused:null
+  };
+  goPass();
+}
+function goPass(){
+  document.getElementById('pass-name').textContent=players[state.revealIdx];
+  document.getElementById('deal-count').textContent='CARD '+(state.revealIdx+1)+' OF '+players.length;
+  show('s-pass');
+}
+function showCard(){
+  const i=state.revealIdx;
+  document.getElementById('reveal-name').textContent=players[i]+" — eyes only";
+  document.getElementById('card').classList.remove('flipped');
+  document.getElementById('btn-hide').style.visibility='hidden';
+  const isImp=i===state.imposter;
+  document.getElementById('card-word').textContent=isImp?state.impWord:state.crewWord;
+  const roleEl=document.getElementById('card-role');
+  if(tellImposter&&isImp){
+    roleEl.innerHTML='<div class="imposter-stamp">Imposter</div><div class="role-note">Blend in. Your word is close, but it\'s not theirs.</div>';
+  }else{
+    roleEl.innerHTML='<div class="role-note">Memorize it. Give clues that fit — but don\'t give it away.</div>';
+  }
+  show('s-reveal');
+}
+function flipCard(){
+  const c=document.getElementById('card');
+  c.classList.toggle('flipped');
+  if(c.classList.contains('flipped')){document.getElementById('btn-hide').style.visibility='visible'}
+}
+function hideAndPass(){
+  document.getElementById('card').classList.remove('flipped');
+  setTimeout(()=>{
+    state.revealIdx++;
+    if(state.revealIdx<players.length){goPass()}
+    else{renderOrder();show('s-order')}
+  },350);
+}
+function renderOrder(){
+  const list=document.getElementById('order-list');list.innerHTML='';
+  state.order.forEach((pIdx,i)=>{
+    const item=document.createElement('div');item.className='order-item';
+    item.innerHTML='<span class="n">'+String(i+1).padStart(2,'0')+'</span><span class="name">'+esc(players[pIdx])+'</span>'+(i===0?'<span class="lead">leads</span>':'');
+    list.appendChild(item);
+  });
+}
+function goVote(){
+  const grid=document.getElementById('vote-grid');grid.innerHTML='';
+  players.forEach((p,i)=>{
+    const chip=document.createElement('button');chip.className='vote-chip';chip.textContent=p;
+    chip.onclick=()=>{
+      state.accused=i;
+      document.querySelectorAll('.vote-chip').forEach(c=>c.classList.remove('selected'));
+      chip.classList.add('selected');
+      const b=document.getElementById('btn-reveal');b.disabled=false;b.style.opacity='1';
+    };
+    grid.appendChild(chip);
+  });
+  const b=document.getElementById('btn-reveal');b.disabled=true;b.style.opacity='.4';
+  show('s-vote');
+}
+function revealResult(){
+  const caught=state.accused===state.imposter;
+  document.getElementById('result-eyebrow').textContent=caught?'Caught red-handed':'Wrong table, detectives';
+  document.getElementById('result-big').textContent=players[state.imposter];
+  document.getElementById('result-sub').textContent=caught
+    ?'was the imposter. Nice read.'
+    :'was the imposter all along — '+players[state.accused]+' was crew. Imposter wins.';
+  document.getElementById('rw-crew').textContent=state.crewWord;
+  document.getElementById('rw-imp').textContent=state.impWord;
+  document.getElementById('steal-note').textContent=caught
+    ?'Last chance, '+players[state.imposter]+': guess the crew\'s word out loud before looking. Nail it and you steal the win.'
+    :'';
+  show('s-result');
+}
+function nextRound(){startGame()}
+function backToSetup(){show('s-setup')}
+function esc(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]))}
+
+players=['','',''];
+renderPlayers();
+</script>
+</body>
+</html>
