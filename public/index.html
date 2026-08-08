@@ -405,11 +405,12 @@ function render(){
         ?('was the imposter all along — '+nameOf(R.accusedId)+' was crew.')
         :'was the imposter and slipped away in the tie.';
     }
-    $('rw-crew').textContent=R.crewWord;$('rw-imp').textContent=R.impWord;
+    document.querySelector('.result-words').style.display=R.stealPending?'none':'flex';
+    if(!R.stealPending){$('rw-crew').textContent=R.crewWord;$('rw-imp').textContent=R.impWord}
     const sp=$('steal-panel');
     if(R.stealPending){
       sp.style.display='block';
-      $('steal-text').textContent=impName+' gets one out-loud guess at the crew\'s word. Steal = +2 points.';
+      $('steal-text').textContent=impName+' gets one out-loud guess at the crew\'s word before the reveal. Steal = +2 points.';
       $('steal-btns').style.display=isHost?'flex':'none';
     }else if(R.caught&&R.stole){
       sp.style.display='block';
