@@ -80,6 +80,7 @@ export class GameRoom {
     }
     if (req.headers.get("Upgrade") === "websocket") {
       if (!this.room) return new Response("no room", { status: 404 });
+      this.ctx.setWebSocketAutoResponse(new WebSocketRequestResponsePair("ping", "pong"));
       const pair = new WebSocketPair();
       this.ctx.acceptWebSocket(pair[1]);
       return new Response(null, { status: 101, webSocket: pair[0] });
@@ -102,11 +103,12 @@ export class GameRoom {
       let p = m.pid && this.room.players.find(x => x.id === m.pid);
       if (!p) {
         const name = String(m.name || "").trim().slice(0, 16) || "Player " + (this.room.players.length + 1);
-        p = { id: crypto.randomUUID(), name, score: 0, connected: true, inRound: false };
+        p = { id: crypto.randomUUID(), name, score: 0, connected: true, inRound: false, lastSeen: Date.now() };
         this.room.players.push(p);
         if (!this.room.hostId) this.room.hostId = p.id;
       } else {
         p.connected = true;
+        p.lastSeen = Date.now();
         const name = String(m.name || "").trim().slice(0, 16);
         if (name) p.name = name;
       }
@@ -178,7 +180,7 @@ export class GameRoom {
     });
     if (!stillOpen) {
       const p = this.room.players.find(x => x.id === pid);
-      if (p) p.connected = false;
+      if (p) { p.connected = false; p.lastSeen = Date.now(); }
       await this.save();
       this.broadcast();
     }
@@ -186,7 +188,10 @@ export class GameRoom {
 
   startRound() {
     const room = this.room;
-    const actives = room.players.filter(p => p.connected);
+    const GRACE_MS = 75000;
+    const actives = room.players.filter(p =>
+      p.connected || (p.lastSeen && Date.now() - p.lastSeen < GRACE_MS)
+    );
     if (actives.length < 3) return;
     room.players.forEach(p => { p.inRound = false; });
     actives.forEach(p => { p.inRound = true; });
