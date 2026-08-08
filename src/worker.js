@@ -266,9 +266,13 @@ export class GameRoom {
       if (room.phase === "result") {
         pub.result = {
           imposterId: r.imposterId, accusedId: r.accusedId, caught: r.caught,
-          stole: r.stole, stealPending: r.stealPending,
-          crewWord: r.crewWord, impWord: r.impWord, deltas: r.deltas
+          stole: r.stole, stealPending: r.stealPending
         };
+        if (!r.stealPending) {
+          pub.result.crewWord = r.crewWord;
+          pub.result.impWord = r.impWord;
+          pub.result.deltas = r.deltas;
+        }
       }
     }
     for (const ws of this.ctx.getWebSockets()) {
