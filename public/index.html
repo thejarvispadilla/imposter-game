@@ -298,6 +298,7 @@ function connect(c,pid){
   ws=new WebSocket(proto+'://'+location.host+'/api/ws?code='+c);
   ws.onopen=()=>{retryMs=800;$('conn').classList.remove('show');send({t:'join',name:myName,pid:pid||undefined})};
   ws.onmessage=e=>{
+    if(e.data==='pong')return;
     let m;try{m=JSON.parse(e.data)}catch(err){return}
     if(m.t==='state'){S=m.pub;YOU=m.you;saveSession();render()}
   };
@@ -334,7 +335,8 @@ function render(){
     const roster=$('lobby-roster');roster.innerHTML='';
     S.players.forEach(p=>{
       const d=document.createElement('div');d.className='roster-item';
-      d.innerHTML='<span class="dot'+(p.connected?'':' off')+'"></span><span class="name">'+esc(p.name)+(p.id===YOU.id?' (you)':'')+'</span>'+(p.id===S.hostId?'<span class="tag">host</span>':'');
+      const flag=p.connected?'':' <span style="opacity:.5;font-weight:400;font-size:13px">— reconnecting</span>';
+      d.innerHTML='<span class="dot'+(p.connected?'':' off')+'"></span><span class="name">'+esc(p.name)+(p.id===YOU.id?' (you)':'')+flag+'</span>'+(p.id===S.hostId?'<span class="tag">host</span>':'');
       roster.appendChild(d);
     });
     $('lobby-settings').style.display=isHost?'block':'none';
@@ -428,6 +430,13 @@ function render(){
   }
 }
 
+setInterval(()=>{if(ws&&ws.readyState===1)ws.send('ping')},20000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'&&S&&(!ws||ws.readyState>1)){
+    const s=loadSession();
+    if(s&&s.code)connect(s.code,s.pid);
+  }
+});
 (function init(){
   const params=new URLSearchParams(location.search);
   const j=params.get('join');
